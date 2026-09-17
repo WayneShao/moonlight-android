@@ -11,7 +11,7 @@ import android.util.DisplayMetrics;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.Toast;
+import com.limelight.ui.rayneo.StereoToast;
 
 import com.limelight.LimeLog;
 import com.limelight.R;
@@ -86,7 +86,7 @@ public class VirtualController {
                     message = "Exiting configuration mode";
                 }
 
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                StereoToast.makeText(context, message, StereoToast.LENGTH_SHORT).show();
 
                 buttonConfigure.invalidate();
 

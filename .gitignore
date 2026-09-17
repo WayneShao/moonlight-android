@@ -42,3 +42,7 @@ app/.externalNativeBuild/
 
 # NDK stuff
 .cxx/
+
+# Host-side validation helpers
+__pycache__/
+*.pyc

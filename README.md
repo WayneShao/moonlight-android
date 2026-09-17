@@ -1,5 +1,10 @@
 # Moonlight Android
 
+This fork maintains RayNeo X3 Pro support on `rayneo/x3-pro`, based on official Moonlight 12.2.
+It uses a single-decoder OES stereo video path, software-rendered stereo UI, native focus
+navigation, a 720p30 preset, and persistent rendering diagnostics. See
+[RayNeo build, window coverage, diagnostics, and validation boundaries](docs/RAYNEO.md).
+
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
 [![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-android/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-android/)
 

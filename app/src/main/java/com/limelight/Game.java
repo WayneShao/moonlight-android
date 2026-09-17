@@ -31,6 +31,13 @@ import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.GameGestures;
 import com.limelight.ui.StreamView;
+import com.limelight.ui.rayneo.RayNeoDevice;
+import com.limelight.ui.rayneo.RayNeoPolicy;
+import com.limelight.ui.rayneo.StereoHost;
+import com.limelight.ui.rayneo.StereoVideoView;
+import com.limelight.ui.rayneo.StreamInputView;
+import android.view.ViewGroup;
+import android.view.Gravity;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
@@ -77,7 +84,7 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
-import android.widget.Toast;
+import com.limelight.ui.rayneo.StereoToast;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -136,7 +143,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private boolean cursorVisible = false;
     private boolean waitingForAllModifiersUp = false;
     private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
-    private StreamView streamView;
+    private View streamView;
+    private boolean rayNeoMode;
+    private StereoVideoView rayNeoVideo;
     private long lastAbsTouchUpTime = 0;
     private long lastAbsTouchDownTime = 0;
     private float lastAbsTouchUpX, lastAbsTouchUpY;
@@ -217,6 +226,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
+        rayNeoMode = RayNeoDevice.enabled(this);
+        if (rayNeoMode) {
+            // This EGL/OES path is SDR. Do not silently attempt HDR or PiP composition.
+            if (prefConfig.enableHdr || prefConfig.enablePip) {
+                com.limelight.ui.rayneo.RayNeoTrace.w("RayNeoVideo", "HDR/PiP disabled for stereo renderer");
+            }
+            prefConfig.enableHdr = false;
+            prefConfig.enablePip = false;
+            com.limelight.ui.rayneo.RayNeoTrace.i("RayNeoVideo", "stream.config " + prefConfig.width + "x" + prefConfig.height
+                    + " fps=" + prefConfig.fps + " bitrateKbps=" + prefConfig.bitrate);
+        }
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
 
         // Enter landscape unless we're on a square screen
@@ -237,9 +257,20 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Listen for non-touch events on the game surface
         streamView = findViewById(R.id.surfaceView);
+        if (rayNeoMode) {
+            ViewGroup parent = (ViewGroup) streamView.getParent();
+            int index = parent.indexOfChild(streamView);
+            ViewGroup.LayoutParams original = streamView.getLayoutParams();
+            parent.removeView(streamView);
+            streamView = new StreamInputView(this, this);
+            streamView.setId(R.id.surfaceView);
+            parent.addView(streamView, index, original);
+            streamView.setOnTouchListener(this);
+            streamView.requestFocus();
+        }
         streamView.setOnGenericMotionListener(this);
         streamView.setOnKeyListener(this);
-        streamView.setInputCallbacks(this);
+        if (!rayNeoMode) ((StreamView) streamView).setInputCallbacks(this);
 
         // Listen for touch events on the background touch view to enable trackpad mode
         // to work on areas outside of the StreamView itself. We use a separate View
@@ -282,6 +313,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
             });
         }
+
+        if (rayNeoMode) setupRayNeoInput();
 
         // Warn the user if they're on a metered connection
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -360,11 +393,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
                 if (!willStreamHdr) {
                     // Nope, no HDR for us :(
-                    Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show();
+                    StereoToast.makeText(this, "Display does not support HDR10", StereoToast.LENGTH_LONG).show();
                 }
             }
             else {
-                Toast.makeText(this, "HDR requires Android 7.0 or later", Toast.LENGTH_LONG).show();
+                StereoToast.makeText(this, "HDR requires Android 7.0 or later", StereoToast.LENGTH_LONG).show();
             }
         }
 
@@ -396,17 +429,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Don't stream HDR if the decoder can't support it
         if (willStreamHdr && !decoderRenderer.isHevcMain10Hdr10Supported() && !decoderRenderer.isAv1Main10Supported()) {
             willStreamHdr = false;
-            Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show();
+            StereoToast.makeText(this, "Decoder does not support HDR10 profile", StereoToast.LENGTH_LONG).show();
         }
 
         // Display a message to the user if HEVC was forced on but we still didn't find a decoder
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && !decoderRenderer.isHevcSupported()) {
-            Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show();
+            StereoToast.makeText(this, "No HEVC decoder found", StereoToast.LENGTH_LONG).show();
         }
 
         // Display a message to the user if AV1 was forced on but we still didn't find a decoder
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && !decoderRenderer.isAv1Supported()) {
-            Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show();
+            StereoToast.makeText(this, "No AV1 decoder found", StereoToast.LENGTH_LONG).show();
         }
 
         // H.264 is always supported
@@ -531,8 +564,50 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             return;
         }
 
-        // The connection will be started when the surface gets created
-        streamView.getHolder().addCallback(this);
+        // The connection will be started when the decoder output surface is ready.
+        if (rayNeoMode) setupRayNeoOutput();
+        else getStreamHolder().addCallback(this);
+    }
+
+    private SurfaceHolder getStreamHolder() {
+        return rayNeoMode ? (rayNeoVideo == null ? null : rayNeoVideo.decoderHolder())
+                : ((StreamView) streamView).getHolder();
+    }
+
+    private void setupRayNeoInput() {
+        FrameLayout root = findViewById(android.R.id.content);
+        StereoHost host = new StereoHost(this, true);
+        while (root.getChildCount() > 0) {
+            View child = root.getChildAt(0);
+            ViewGroup.LayoutParams params = child.getLayoutParams();
+            root.removeView(child);
+            if (child == streamView) {
+                int[] fit = RayNeoPolicy.fit(prefConfig.width, prefConfig.height, 640, 480);
+                params = new FrameLayout.LayoutParams(prefConfig.stretchVideo ? 640 : fit[2],
+                        prefConfig.stretchVideo ? 480 : fit[3], Gravity.CENTER);
+            }
+            host.content.addView(child, params);
+        }
+        root.addView(host, new FrameLayout.LayoutParams(-1, -1));
+        streamView.requestFocus();
+        com.limelight.ui.rayneo.RayNeoTrace.i("RayNeoVideo", "window.installed separate-OES + software-UI");
+    }
+
+    private void setupRayNeoOutput() {
+        FrameLayout root = findViewById(android.R.id.content);
+        rayNeoVideo = new StereoVideoView(this, prefConfig.width, prefConfig.height,
+                prefConfig.stretchVideo, this);
+        decoderRenderer.setOutputSizeListener((width, height) -> {
+            rayNeoVideo.updateVideoSize(width, height);
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                int[] fit = RayNeoPolicy.fit(width, height, 640, 480);
+                streamView.setLayoutParams(new FrameLayout.LayoutParams(
+                        prefConfig.stretchVideo ? 640 : fit[2],
+                        prefConfig.stretchVideo ? 480 : fit[3], Gravity.CENTER));
+            });
+        });
+        root.addView(rayNeoVideo, 0, new FrameLayout.LayoutParams(-1, -1));
     }
 
     private void setPreferredOrientationForCurrentDisplay() {
@@ -950,13 +1025,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
 
-        if (prefConfig.stretchVideo || aspectRatioMatch) {
+        if (rayNeoMode) {
+            // Decoder buffer uses stream dimensions; OES output scales to each eye.
+        } else if (prefConfig.stretchVideo || aspectRatioMatch) {
             // Set the surface to the size of the video
-            streamView.getHolder().setFixedSize(prefConfig.width, prefConfig.height);
+            getStreamHolder().setFixedSize(prefConfig.width, prefConfig.height);
         }
         else {
             // Set the surface to scale based on the aspect ratio of the stream
-            streamView.setDesiredAspectRatio((double)prefConfig.width / (double)prefConfig.height);
+            ((StreamView) streamView).setDesiredAspectRatio((double)prefConfig.width / (double)prefConfig.height);
         }
 
         // Set the desired refresh rate that will get passed into setFrameRate() later
@@ -1034,6 +1111,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     protected void onDestroy() {
+        if (rayNeoVideo != null) rayNeoVideo.close();
         super.onDestroy();
 
         if (controllerHandler != null) {
@@ -1131,7 +1209,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 if (message != null) {
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                    StereoToast.makeText(this, message, StereoToast.LENGTH_LONG).show();
                 }
             }
 
@@ -2267,8 +2345,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     LimeLog.severe(stage + " failed: " + errorCode);
 
                     // If video initialization failed and the surface is still valid, display extra information for the user
-                    if (stage.contains("video") && streamView.getHolder().getSurface().isValid()) {
-                        Toast.makeText(Game.this, getResources().getText(R.string.video_decoder_init_failed), Toast.LENGTH_LONG).show();
+                    if (stage.contains("video") && getStreamHolder() != null && getStreamHolder().getSurface().isValid()) {
+                        StereoToast.makeText(Game.this, getResources().getText(R.string.video_decoder_init_failed), StereoToast.LENGTH_LONG).show();
                     }
 
                     String dialogText = getResources().getString(R.string.conn_error_msg) + " " + stage +" (error "+errorCode+")";
@@ -2455,7 +2533,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
+                StereoToast.makeText(Game.this, message, StereoToast.LENGTH_LONG).show();
             }
         });
     }
@@ -2466,7 +2544,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
+                    StereoToast.makeText(Game.this, message, StereoToast.LENGTH_LONG).show();
                 }
             });
         }
@@ -2523,6 +2601,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         float desiredFrameRate;
+        Surface timingSurface = rayNeoMode ? rayNeoVideo.getHolder().getSurface() : holder.getSurface();
 
         surfaceCreated = true;
 
@@ -2546,12 +2625,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // We want to change frame rate even if it's not seamless, since prepareDisplayForRendering()
             // will not set the display mode on S+ if it only differs by the refresh rate. It depends
             // on us to trigger the frame rate switch here.
-            holder.getSurface().setFrameRate(desiredFrameRate,
+            timingSurface.setFrameRate(desiredFrameRate,
                     Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
                     Surface.CHANGE_FRAME_RATE_ALWAYS);
         }
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            holder.getSurface().setFrameRate(desiredFrameRate,
+            timingSurface.setFrameRate(desiredFrameRate,
                     Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
         }
 

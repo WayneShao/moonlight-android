@@ -15,6 +15,7 @@ import org.jcodec.codecs.h264.io.model.VUIParameters;
 
 import com.limelight.BuildConfig;
 import com.limelight.LimeLog;
+import com.limelight.ui.rayneo.RayNeoTrace;
 import com.limelight.R;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
 import com.limelight.nvstream.jni.MoonBridge;
@@ -68,6 +69,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private int initialWidth, initialHeight;
     private int videoFormat;
     private SurfaceHolder renderTarget;
+    public interface OutputSizeListener { void onSize(int width, int height); }
+    private volatile OutputSizeListener outputSizeListener;
+    public void setOutputSizeListener(OutputSizeListener listener) { outputSizeListener = listener; }
     private volatile boolean stopping;
     private CrashListener crashListener;
     private boolean reportedCrash;
@@ -516,7 +520,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
         LimeLog.info("Configuring with format: "+format);
 
+        RayNeoTrace.decoder("codec.configure begin format=" + format + " surfaceValid=" + renderTarget.getSurface().isValid());
         videoDecoder.configure(format, renderTarget.getSurface(), null, 0);
+        RayNeoTrace.decoder("codec.configure end");
 
         configuredFormat = format;
 
@@ -533,14 +539,21 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         videoDecoder.setVideoScalingMode(MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT);
 
         // Start the decoder
+        RayNeoTrace.decoder("codec.start begin");
         videoDecoder.start();
+        RayNeoTrace.decoder("codec.start end");
 
     }
 
     private boolean tryConfigureDecoder(MediaCodecInfo selectedDecoderInfo, MediaFormat format, boolean throwOnCodecError) {
         boolean configured = false;
         try {
+            RayNeoTrace.decoder("codec.create begin name=" + selectedDecoderInfo.getName());
             videoDecoder = MediaCodec.createByCodecName(selectedDecoderInfo.getName());
+            if (Build.VERSION.SDK_INT >= 29) {
+                RayNeoTrace.decoder("codec.create end hardware=" + selectedDecoderInfo.isHardwareAccelerated()
+                        + " vendor=" + selectedDecoderInfo.isVendor());
+            }
             configureAndStartDecoder(format);
             LimeLog.info("Using codec " + selectedDecoderInfo.getName() + " for hardware decoding " + format.getString(MediaFormat.KEY_MIME));
             configured = true;
@@ -832,6 +845,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     // Returns true if the exception is transient
     private boolean handleDecoderException(IllegalStateException e) {
+        if (RayNeoTrace.enabled()) RayNeoTrace.e("RayNeoDecoder", "codec.exception stopping=" + stopping, e);
         // Eat decoder exceptions if we're in the process of stopping
         if (stopping) {
             return false;
@@ -1092,6 +1106,19 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                     LimeLog.info("Output format changed");
                                     outputFormat = videoDecoder.getOutputFormat();
                                     LimeLog.info("New output format: " + outputFormat);
+                                    RayNeoTrace.decoder("codec.output-format " + outputFormat);
+                                    OutputSizeListener listener = outputSizeListener;
+                                    if (listener != null) {
+                                        int width = outputFormat.getInteger(MediaFormat.KEY_WIDTH);
+                                        int height = outputFormat.getInteger(MediaFormat.KEY_HEIGHT);
+                                        if (outputFormat.containsKey("crop-right") && outputFormat.containsKey("crop-left")) {
+                                            width = outputFormat.getInteger("crop-right") - outputFormat.getInteger("crop-left") + 1;
+                                        }
+                                        if (outputFormat.containsKey("crop-bottom") && outputFormat.containsKey("crop-top")) {
+                                            height = outputFormat.getInteger("crop-bottom") - outputFormat.getInteger("crop-top") + 1;
+                                        }
+                                        if (width > 0 && height > 0) listener.onSize(width, height);
+                                    }
                                     break;
                                 default:
                                     break;

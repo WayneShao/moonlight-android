@@ -51,7 +51,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
+import com.limelight.ui.rayneo.StereoToast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import org.xmlpull.v1.XmlPullParserException;
@@ -394,15 +394,15 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
     private void doPair(final ComputerDetails computer) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
-            Toast.makeText(PcView.this, getResources().getString(R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
+            StereoToast.makeText(PcView.this, getResources().getString(R.string.pair_pc_offline), StereoToast.LENGTH_SHORT).show();
             return;
         }
         if (managerBinder == null) {
-            Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+            StereoToast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), StereoToast.LENGTH_LONG).show();
             return;
         }
 
-        Toast.makeText(PcView.this, getResources().getString(R.string.pairing), Toast.LENGTH_SHORT).show();
+        StereoToast.makeText(PcView.this, getResources().getString(R.string.pairing), StereoToast.LENGTH_SHORT).show();
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -480,7 +480,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     @Override
                     public void run() {
                         if (toastMessage != null) {
-                            Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
+                            StereoToast.makeText(PcView.this, toastMessage, StereoToast.LENGTH_LONG).show();
                         }
 
                         if (toastSuccess) {
@@ -499,12 +499,12 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
     private void doWakeOnLan(final ComputerDetails computer) {
         if (computer.state == ComputerDetails.State.ONLINE) {
-            Toast.makeText(PcView.this, getResources().getString(R.string.wol_pc_online), Toast.LENGTH_SHORT).show();
+            StereoToast.makeText(PcView.this, getResources().getString(R.string.wol_pc_online), StereoToast.LENGTH_SHORT).show();
             return;
         }
 
         if (computer.macAddress == null) {
-            Toast.makeText(PcView.this, getResources().getString(R.string.wol_no_mac), Toast.LENGTH_SHORT).show();
+            StereoToast.makeText(PcView.this, getResources().getString(R.string.wol_no_mac), StereoToast.LENGTH_SHORT).show();
             return;
         }
 
@@ -523,7 +523,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
+                        StereoToast.makeText(PcView.this, toastMessage, StereoToast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -532,15 +532,15 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
     private void doUnpair(final ComputerDetails computer) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
-            Toast.makeText(PcView.this, getResources().getString(R.string.error_pc_offline), Toast.LENGTH_SHORT).show();
+            StereoToast.makeText(PcView.this, getResources().getString(R.string.error_pc_offline), StereoToast.LENGTH_SHORT).show();
             return;
         }
         if (managerBinder == null) {
-            Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+            StereoToast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), StereoToast.LENGTH_LONG).show();
             return;
         }
 
-        Toast.makeText(PcView.this, getResources().getString(R.string.unpairing), Toast.LENGTH_SHORT).show();
+        StereoToast.makeText(PcView.this, getResources().getString(R.string.unpairing), StereoToast.LENGTH_SHORT).show();
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -575,7 +575,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
+                        StereoToast.makeText(PcView.this, toastMessage, StereoToast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -584,11 +584,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
     private void doAppList(ComputerDetails computer, boolean newlyPaired, boolean showHiddenGames) {
         if (computer.state == ComputerDetails.State.OFFLINE) {
-            Toast.makeText(PcView.this, getResources().getString(R.string.error_pc_offline), Toast.LENGTH_SHORT).show();
+            StereoToast.makeText(PcView.this, getResources().getString(R.string.error_pc_offline), StereoToast.LENGTH_SHORT).show();
             return;
         }
         if (managerBinder == null) {
-            Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+            StereoToast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), StereoToast.LENGTH_LONG).show();
             return;
         }
 
@@ -626,7 +626,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     @Override
                     public void run() {
                         if (managerBinder == null) {
-                            Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+                            StereoToast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), StereoToast.LENGTH_LONG).show();
                             return;
                         }
                         removeComputer(computer.details);
@@ -640,7 +640,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
             case RESUME_ID:
                 if (managerBinder == null) {
-                    Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+                    StereoToast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), StereoToast.LENGTH_LONG).show();
                     return true;
                 }
 
@@ -649,7 +649,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
             case QUIT_ID:
                 if (managerBinder == null) {
-                    Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+                    StereoToast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), StereoToast.LENGTH_LONG).show();
                     return true;
                 }
 

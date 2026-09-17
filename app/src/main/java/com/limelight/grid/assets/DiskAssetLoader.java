@@ -24,10 +24,12 @@ public class DiskAssetLoader {
     private static final int STANDARD_ASSET_HEIGHT = 400;
 
     private final boolean isLowRamDevice;
+    private final boolean softwareBitmaps;
     private final File cacheDir;
 
     public DiskAssetLoader(Context context) {
         this.cacheDir = context.getCacheDir();
+        this.softwareBitmaps = com.limelight.ui.rayneo.RayNeoDevice.enabled(context);
         this.isLowRamDevice =
                 ((ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE)).isLowRamDevice();
     }
@@ -97,7 +99,7 @@ public class DiskAssetLoader {
                 options.inPreferredConfig = Bitmap.Config.RGB_565;
                 options.inDither = true;
             }
-            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !softwareBitmaps) {
                 options.inPreferredConfig = Bitmap.Config.HARDWARE;
             }
 
@@ -114,6 +116,7 @@ public class DiskAssetLoader {
                 scaledBitmap.bitmap = ImageDecoder.decodeBitmap(ImageDecoder.createSource(file), new ImageDecoder.OnHeaderDecodedListener() {
                     @Override
                     public void onHeaderDecoded(ImageDecoder imageDecoder, ImageDecoder.ImageInfo imageInfo, ImageDecoder.Source source) {
+                        if (softwareBitmaps) imageDecoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
                         scaledBitmap.originalWidth = imageInfo.getSize().getWidth();
                         scaledBitmap.originalHeight = imageInfo.getSize().getHeight();
 

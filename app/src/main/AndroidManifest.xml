@@ -43,6 +43,7 @@
         android:required="false"/>
 
     <application
+        android:name=".ui.rayneo.RayNeoApplication"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/backup_rules_s"
@@ -63,6 +64,8 @@
             android:enabled="true"
             android:exported="true">
         </provider>
+
+        <meta-data android:name="com.rayneo.mercury.app" android:value="true" />
 
         <!-- Samsung multi-window support -->
         <uses-library

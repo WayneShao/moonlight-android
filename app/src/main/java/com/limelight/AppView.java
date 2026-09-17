@@ -44,7 +44,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
+import com.limelight.ui.rayneo.StereoToast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import org.xmlpull.v1.XmlPullParserException;
@@ -203,7 +203,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                         @Override
                         public void run() {
                             // Display a toast to the user and quit the activity
-                            Toast.makeText(AppView.this, getResources().getText(R.string.lost_connection), Toast.LENGTH_SHORT).show();
+                            StereoToast.makeText(AppView.this, getResources().getText(R.string.lost_connection), StereoToast.LENGTH_SHORT).show();
                             finish();
                         }
                     });
@@ -221,7 +221,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                                     getResources().getString(R.string.scut_not_paired));
 
                             // Display a toast to the user and quit the activity
-                            Toast.makeText(AppView.this, getResources().getText(R.string.scut_not_paired), Toast.LENGTH_SHORT).show();
+                            StereoToast.makeText(AppView.this, getResources().getText(R.string.scut_not_paired), StereoToast.LENGTH_SHORT).show();
                             finish();
                         }
                     });
@@ -496,7 +496,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 ImageView appImageView = info.targetView.findViewById(R.id.grid_image);
                 Bitmap appBits = ((BitmapDrawable)appImageView.getDrawable()).getBitmap();
                 if (!shortcutHelper.createPinnedGameShortcut(computer, app.app, appBits)) {
-                    Toast.makeText(AppView.this, getResources().getString(R.string.unable_to_pin_shortcut), Toast.LENGTH_LONG).show();
+                    StereoToast.makeText(AppView.this, getResources().getString(R.string.unable_to_pin_shortcut), StereoToast.LENGTH_LONG).show();
                 }
                 return true;
 
