@@ -88,8 +88,8 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
-            versionNameSuffix "-rayneo.1"
-            resValue "string", "app_label", "Moonlight (RayNeo)"
+            versionNameSuffix "-rayneo.2"
+            resValue "string", "app_label", "Moonlight"
             resValue "string", "app_label_root", "Moonlight (Root Debug)"
         }
         release {

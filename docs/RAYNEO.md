@@ -51,7 +51,7 @@ git submodule update --init --recursive
 ./scripts/build-rayneo.ps1 -JavaHome 'PATH_TO_JDK_17'
 ```
 
-产物 `out/Moonlight-12.2-rayneo.1-debug.apk`，包名 `com.limelight.debug`，版本 `12.2-rayneo.1`，保留上游非官方调试包边界。由本机调试证书签名，跨机器重建的 debug 证书不保证相同，覆盖安装前须核对签名。源码 fork 并未发布签名私钥。
+产物 `out/Moonlight-12.2-rayneo.2-debug.apk`，包名 `com.limelight.debug`，版本 `12.2-rayneo.2`，保留上游非官方调试包边界。由本机调试证书签名，跨机器重建的 debug 证书不保证相同，覆盖安装前须核对签名。源码 fork 并未发布签名私钥。
 
 测试：设备/尺寸策略 9 项，手势状态机 12 项，Android UI 7 项，主机重启捕获 1 项。Lint 沿用上游规则；存在上游警告及土耳其语拼写 quick-fix 内部异常，构建日志必须保留，不把任务成功描述成所有检查器无警告。
 
@@ -87,3 +87,7 @@ USB 掉线会分段保存日志，恢复后比较 boot ID 与 uptime；boot ID �
 ## 仍需眼镜验收
 
 本次未安装、未启动。执行 `adb devices -l` 时无在线设备。依次验收普通界面/弹窗/镜腿，再短时 720p30 串流；记录真实 decoder、双眼帧、延迟、CPU/GPU/温度。覆盖连接中退出、串流退出、后台/重新进入、EGL 丢失、分辨率变化和系统方向开关。发生整机重启时保留日志/构建并停止重现，再判断下一步；USB 断连本身不证明重启。
+
+## 实机更新 2026-09-17
+
+已部署新版并验证真实串流。串流页为鼠标模式：单指点击左键、双指点击右键；第一次三击显示提示，3 秒内第二次三击退出。显示名称 Moonlight。菜单仍为原生焦点导航。参见 DEVICE-VALIDATION-20260917.md；旧章节的未安装状态是初版构建时记录。

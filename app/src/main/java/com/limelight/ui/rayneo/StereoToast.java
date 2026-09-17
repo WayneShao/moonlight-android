@@ -28,6 +28,13 @@ public final class StereoToast {
             for(View root:WindowInspector.getGlobalWindowViews()) if(root.hasWindowFocus()) {
                 StereoHost host=RayNeoWindows.findHost(root);
                 if(host==null) continue;
+                showIn(host,text,duration);
+                return;
+            }
+        }
+        Toast.makeText(context,text,duration).show();
+    }); }
+    static void showIn(StereoHost host,CharSequence text,int duration) {
                 TextView old=current.get();
                 if(old!=null && old.getParent() instanceof FrameLayout) ((FrameLayout)old.getParent()).removeView(old);
                 TextView message=new TextView(host.getContext());
@@ -37,10 +44,10 @@ public final class StereoToast {
                 FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);
                 lp.bottomMargin=20; lp.leftMargin=12; lp.rightMargin=12;
                 host.content.addView(message,lp); current=new WeakReference<>(message);
-                MAIN.postDelayed(()->{if(message.getParent()==host.content) host.content.removeView(message);},duration==LENGTH_LONG?3500:2000);
-                return;
-            }
-        }
-        Toast.makeText(context,text,duration).show();
-    }); }
+                host.invalidate();host.getRootView().invalidate();
+                MAIN.postDelayed(()->{
+                    if(message.getParent()==host.content) host.content.removeView(message);
+                    host.invalidate();host.getRootView().invalidate();
+                },duration==LENGTH_LONG?3500:2000);
+    }
 }

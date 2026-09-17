@@ -85,7 +85,7 @@ def main():
                         log = (args.output / f'logcat-{segment:03}.txt').open('wb')
                         proc = subprocess.Popen(base + ['logcat', '-b', 'main', '-b', 'system', '-b', 'crash',
                                 '-v', 'threadtime', '-T', '1',
-                                'RayNeo:V', 'RayNeoUI:V', 'RayNeoVideo:V', 'RayNeoDecoder:V', 'RayNeoTrace:V',
+                                'RayNeo:V', 'RayNeoUI:V', 'RayNeoVideo:V', 'RayNeoDecoder:V', 'RayNeoTrace:V', 'RayNeoInput:V',
                                 'AndroidRuntime:V', 'DEBUG:V', 'libc:V', 'EGL_emulation:V', 'Adreno:V',
                                 'MediaCodec:V', 'CCodec:V', 'ACodec:V', 'SurfaceFlinger:W', '*:S'],
                                 stdout=log, stderr=subprocess.STDOUT, creationflags=creationflags)

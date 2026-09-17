@@ -146,6 +146,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private View streamView;
     private boolean rayNeoMode;
     private StereoVideoView rayNeoVideo;
+    private com.limelight.ui.rayneo.MouseClickQueue rayNeoClicks;
     private long lastAbsTouchUpTime = 0;
     private long lastAbsTouchDownTime = 0;
     private float lastAbsTouchUpX, lastAbsTouchUpY;
@@ -577,6 +578,28 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private void setupRayNeoInput() {
         FrameLayout root = findViewById(android.R.id.content);
         StereoHost host = new StereoHost(this, true);
+        StreamInputView mouseView = (StreamInputView) streamView;
+        rayNeoClicks = new com.limelight.ui.rayneo.MouseClickQueue((right, down) -> {
+            if (connected) {
+                byte button=right?MouseButtonPacket.BUTTON_RIGHT:MouseButtonPacket.BUTTON_LEFT;
+                if (down) conn.sendMouseButtonDown(button); else conn.sendMouseButtonUp(button);
+            }
+        });
+        mouseView.setMouseOutput(new StreamInputView.MouseOutput() {
+            @Override public void position(int x, int y, int width, int height) {
+                if (connected) conn.sendMousePosition((short)x, (short)y, (short)width, (short)height);
+            }
+            @Override public void click(boolean right) {
+                if (connected) rayNeoClicks.click(right);
+            }
+        });
+        host.setStreamActions(mouseView::templeMotion, event -> {
+            if (!connected) return;
+            if (event.isFromSource(InputDevice.SOURCE_MOUSE) || !prefConfig.touchscreenTrackpad) {
+                updateMousePosition((View) streamView.getParent(), event);
+            }
+            rayNeoClicks.click(false);
+        }, this::onBackPressed);
         while (root.getChildCount() > 0) {
             View child = root.getChildAt(0);
             ViewGroup.LayoutParams params = child.getLayoutParams();
@@ -815,6 +838,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
+        if (!hasFocus && rayNeoClicks != null) rayNeoClicks.cancel();
         super.onWindowFocusChanged(hasFocus);
 
         // We can't guarantee the state of modifiers keys which may have
@@ -1111,6 +1135,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     protected void onDestroy() {
+        if (rayNeoClicks != null) rayNeoClicks.cancel();
         if (rayNeoVideo != null) rayNeoVideo.close();
         super.onDestroy();
 

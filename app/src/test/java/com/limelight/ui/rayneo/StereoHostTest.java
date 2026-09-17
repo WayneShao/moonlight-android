@@ -5,6 +5,7 @@ import android.app.Application;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.os.Looper;
 import android.view.View;
 import android.view.MotionEvent;
@@ -127,6 +128,14 @@ public class StereoHostTest {
         new FocusNavigator(host).move(KeyEvent.KEYCODE_DPAD_LEFT,View.FOCUS_LEFT);
         idle(1);
         assertEquals(button,host.content.findFocus()); assertEquals(0,clicks[0]);
+    }
+    @Test public void childDamageIncludesBothPhysicalEyes() {
+        Activity activity=Robolectric.buildActivity(Activity.class).setup().get();
+        StereoHost host=host(activity);
+        Rect damage=new Rect(10,10,30,30);
+        host.invalidateChildInParent(new int[]{0,0},damage);
+        assertTrue("Right eye must be invalidated too",damage.right>=1280);
+        assertEquals(0,damage.left);
     }
     @Test public void removedTargetRecoversToCurrentTreeWithoutClicking() {
         Activity activity=Robolectric.buildActivity(Activity.class).setup().visible().windowFocusChanged(true).get();
